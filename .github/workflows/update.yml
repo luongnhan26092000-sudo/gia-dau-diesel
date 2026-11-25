@@ -1,0 +1,35 @@
+name: Cập nhật giá dầu
+
+on:
+  schedule:
+    - cron: "7 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-prices
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Đọc giá và cập nhật data.json
+        run: python update_prices.py
+      - name: Commit nếu có thay đổi
+        run: |
+          if [ -n "$(git status --porcelain data.json)" ]; then
+            git config user.name  "price-bot"
+            git config user.email "price-bot@users.noreply.github.com"
+            git add data.json
+            git commit -m "Cập nhật giá dầu $(TZ=Asia/Ho_Chi_Minh date +'%d/%m/%Y %H:%M')"
+            git push
+          else
+            echo "Không có thay đổi."
+          fi
